@@ -1,20 +1,83 @@
+from pathlib import Path
+
 from langchain_ollama import ChatOllama
 
-from src.document_summarizer import get_pdf_files, summarize_pdf
 from src.embedding_model import create_embedding_model
+from src.parsers.docling_parser import parse_pdf
+from src.section_mapper import map_sections
+from src.thesis_summarizer import summarize_thesis_sections
 from src.vector_store import load_vector_store
 
 
-def answer_question(question, vector_store, llm):
+DOCS_FOLDER = Path("docs")
+
+
+def create_llm() -> ChatOllama:
+    """Uygulamada kullanılacak yerel dil modelini oluşturur."""
+
+    return ChatOllama(
+        model="llama3.2:3b",
+        temperature=0,
+        num_ctx=4096,
+        num_predict=250,
+        keep_alive="30m",
+    )
+
+
+def get_pdf_files() -> list[Path]:
+    """docs klasöründeki PDF dosyalarını döndürür."""
+
+    if not DOCS_FOLDER.exists():
+        return []
+
+    return sorted(DOCS_FOLDER.glob("*.pdf"))
+
+
+def select_pdf() -> Path | None:
+    """Kullanıcının docs klasöründen bir PDF seçmesini sağlar."""
+
+    pdf_files = get_pdf_files()
+
+    if not pdf_files:
+        print("\ndocs klasöründe PDF bulunamadı.")
+        return None
+
+    print("\nPDF dosyaları:")
+
+    for index, pdf_file in enumerate(pdf_files, start=1):
+        print(f"{index} - {pdf_file.name}")
+
+    choice = input("\nPDF numarası: ").strip()
+
+    if not choice.isdigit():
+        print("Lütfen geçerli bir sayı girin.")
+        return None
+
+    pdf_index = int(choice) - 1
+
+    if pdf_index < 0 or pdf_index >= len(pdf_files):
+        print("Geçersiz PDF seçimi.")
+        return None
+
+    return pdf_files[pdf_index]
+
+
+def answer_question(
+    question: str,
+    vector_store,
+    llm: ChatOllama,
+) -> None:
+    """İndekslenmiş belgeler üzerinden soruyu cevaplar."""
+
     results = vector_store.max_marginal_relevance_search(
         question,
         k=7,
-        fetch_k=20
+        fetch_k=20,
     )
 
-    for document in results:
-        print("\n--- Bulunan chunk ---")
-        print(document.page_content)
+    if not results:
+        print("\nİlgili belge parçası bulunamadı.")
+        return
 
     context = "\n\n".join(
         document.page_content
@@ -22,139 +85,194 @@ def answer_question(question, vector_store, llm):
     )
 
     prompt = f"""
-GÖREV:
-Aşağıdaki belge parçalarına dayanarak kullanıcının sorusunu cevapla.
+You are a document question-answering assistant.
 
-KURALLAR:
-1. Sadece belge parçalarındaki bilgileri kullan.
-2. Kurallardan veya görev tanımından bahsetme.
-3. Cevabı doğrudan, kısa ve Türkçe ver.
-4. Belgede bulunmayan hiçbir bilgi ekleme veya tahmin yapma.
-5. Aynı bilgiyi tekrar etme.
-6. Soruyla ilgisiz şekil, tablo ve bölüm numaralarını yazma.
-7. Bilgi yoksa yalnızca "Bu bilgi belgelerde bulunamadı." yaz.
+Answer the user's question using ONLY the provided document excerpts.
 
-BELGE PARÇALARI:
+Rules:
+- Do not use external knowledge.
+- Do not add information that is not explicitly supported.
+- Give a concise and direct answer.
+- Avoid repetition.
+- If the answer cannot be found, write:
+  "This information was not found in the documents."
+- Return only the final answer.
+
+Document excerpts:
+
 {context}
 
-KULLANICI SORUSU:
-{question}
+Question:
 
-CEVAP:
-"""
+{question}
+""".strip()
 
     response = llm.invoke(prompt)
 
-    print("\nCevap:\n")
-    print(response.content)
+    print("\nAnswer:\n")
+    print(response.content.strip())
 
-    print("\nKaynaklar:")
+    print("\nSources:")
 
     seen_sources = set()
 
     for document in results:
         source = document.metadata.get(
             "source",
-            "Bilinmeyen dosya"
+            "Unknown file",
         )
 
         page = document.metadata.get(
             "page",
-            0
+            0,
         ) + 1
 
         source_info = (source, page)
 
-        if source_info not in seen_sources:
-            seen_sources.add(source_info)
-            print(f"- {source} (Sayfa {page})")
-
-
-embedding_model = create_embedding_model()
-
-vector_store = load_vector_store(
-    embedding_model
-)
-
-llm = ChatOllama(
-    model="llama3.2:3b",
-    keep_alive="30m",
-    num_ctx=2048,
-    num_predict=200,
-    temperature=0
-)
-
-while True:
-    print("\n==============================")
-    print("Local Docs RAG")
-    print("==============================")
-    print("1 - Belgelerde soru sor")
-    print("2 - PDF özetle")
-    print("0 - Çıkış")
-
-    choice = input("\nSeçiminiz: ").strip()
-
-    if choice == "0":
-        print("Program kapatıldı.")
-        break
-
-    elif choice == "1":
-        question = input("\nSorunuz: ").strip()
-
-        if not question:
-            print("Lütfen bir soru yazın.")
+        if source_info in seen_sources:
             continue
 
-        answer_question(
-            question,
-            vector_store,
-            llm
-        )
+        seen_sources.add(source_info)
 
-    elif choice == "2":
-        pdf_files = get_pdf_files()
+        source_name = Path(source).name
 
-        if not pdf_files:
-            print("\ndocs klasöründe PDF bulunamadı.")
-            continue
+        print(f"- {source_name} (Page {page})")
 
-        print("\nPDF dosyaları:")
 
-        for index, pdf_file in enumerate(
-            pdf_files,
-            start=1
-        ):
-            print(f"{index} - {pdf_file.name}")
+def summarize_selected_pdf(
+    pdf_path: Path,
+    llm: ChatOllama,
+) -> None:
+    """PDF'yi Docling ile ayrıştırır ve bölüm bazlı özetler."""
 
-        pdf_choice = input(
-            "\nÖzetlenecek PDF numarası: "
-        ).strip()
+    print(f"\nAnalyzing: {pdf_path.name}")
+    print("Parsing document structure with Docling...\n")
 
-        if not pdf_choice.isdigit():
-            print("Lütfen geçerli bir sayı girin.")
-            continue
+    try:
+        parsed_sections = parse_pdf(pdf_path)
+    except Exception as error:
+        print(f"PDF parsing failed: {error}")
+        return
 
-        pdf_index = int(pdf_choice) - 1
+    if not parsed_sections:
+        print("No document sections were detected.")
+        return
 
-        if pdf_index < 0 or pdf_index >= len(pdf_files):
-            print("Geçersiz PDF seçimi.")
-            continue
+    mapped_sections, unmapped_sections = map_sections(
+        parsed_sections
+    )
 
-        selected_pdf = pdf_files[pdf_index]
+    if not mapped_sections:
+        print("No supported main sections could be mapped.")
+        return
 
+    print(f"{len(mapped_sections)} main sections mapped.")
+
+    if unmapped_sections:
         print(
-            f"\n{selected_pdf.name} özetleniyor..."
+            f"{len(unmapped_sections)} headings were left unmapped."
         )
 
-        summary = summarize_pdf(
-            selected_pdf,
-            llm
-        )
+    print("\nGenerating section summaries...\n")
 
-        print("\n==============================")
-        print("PDF Özeti")
-        print("==============================")
+    try:
+        summaries = summarize_thesis_sections(
+            llm=llm,
+            sections=mapped_sections,
+        )
+    except Exception as error:
+        print(f"Summarization failed: {error}")
+        return
+
+    if not summaries:
+        print("No summaries could be generated.")
+        return
+
+    print("\n" + "=" * 70)
+    print("SECTION SUMMARIES")
+    print("=" * 70)
+
+    for section_name, summary in summaries.items():
+        print(f"\n{section_name}\n")
         print(summary)
+        print("\n" + "-" * 70)
 
-    else:
-        print("Geçersiz seçim.")
+
+def show_documents() -> None:
+    """docs klasöründeki PDF dosyalarını listeler."""
+
+    pdf_files = get_pdf_files()
+
+    if not pdf_files:
+        print("\ndocs klasöründe PDF bulunamadı.")
+        return
+
+    print("\nAvailable documents:")
+
+    for pdf_file in pdf_files:
+        print(f"- {pdf_file.name}")
+
+
+def main() -> None:
+    """CLI uygulamasını başlatır."""
+
+    print("Loading embedding model...")
+
+    embedding_model = create_embedding_model()
+
+    print("Loading vector store...")
+
+    vector_store = load_vector_store(
+        embedding_model
+    )
+
+    llm = create_llm()
+
+    while True:
+        print("\n" + "=" * 40)
+        print("LOCAL THESIS RAG")
+        print("=" * 40)
+        print("1 - Ask questions about documents")
+        print("2 - Generate section summaries")
+        print("3 - List PDF documents")
+        print("0 - Exit")
+
+        choice = input("\nSelect an option: ").strip()
+
+        if choice == "0":
+            print("\nProgram closed.")
+            break
+
+        if choice == "1":
+            question = input("\nQuestion: ").strip()
+
+            if not question:
+                print("Please enter a question.")
+                continue
+
+            answer_question(
+                question=question,
+                vector_store=vector_store,
+                llm=llm,
+            )
+
+        elif choice == "2":
+            selected_pdf = select_pdf()
+
+            if selected_pdf is None:
+                continue
+
+            summarize_selected_pdf(
+                pdf_path=selected_pdf,
+                llm=llm,
+            )
+
+        elif choice == "3":
+            show_documents()
+
+        else:
+            print("Invalid selection.")
+
+
+if __name__ == "__main__":
+    main()

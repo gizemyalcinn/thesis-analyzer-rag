@@ -3,7 +3,7 @@ from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_ollama import ChatOllama
 
-from src.thesis_section_extractor import extract_thesis_sections
+from thesis_section_extractor_legacy import extract_thesis_sections
 from src.thesis_summarizer import summarize_thesis_sections
 
 

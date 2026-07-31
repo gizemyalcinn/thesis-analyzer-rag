@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader
 
-from src.thesis_section_extractor import extract_thesis_sections
+from thesis_section_extractor_legacy import extract_thesis_sections
 
 
 DOCS_FOLDER = Path("docs")

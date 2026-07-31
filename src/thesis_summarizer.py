@@ -43,7 +43,7 @@ def get_summarizable_sections(
 
 def split_text_by_words(
     text: str,
-    max_words: int = 1200,
+    max_words: int = 700,
 ) -> list[str]:
     """Uzun bölüm metnini kelime sınırına göre parçalara ayırır."""
 
@@ -68,24 +68,42 @@ def summarize_chunk(
     section_name: str,
     chunk: str,
 ) -> str:
-    """Bir bölüm parçasını kısa ve akademik biçimde özetler."""
+    """Summarizes one part of an academic section."""
 
     prompt = f"""
-Aşağıdaki metin "{section_name}" adlı akademik tez bölümünden alınmıştır.
+You are an experienced academic reviewer.
 
-Metni Türkçe olarak özetle.
+Your task is to summarize ONE section of a thesis.
 
-Kurallar:
-- Yalnızca verilen metindeki bilgilere dayan.
-- Metinde bulunmayan bilgi ekleme.
-- Akademik fakat anlaşılır bir dil kullan.
-- Ana amaçları, yöntemleri, bulguları veya çıkarımları koru.
-- Tekrarları çıkar.
-- 3 ile 5 cümle arasında yaz.
-- Başlık ekleme.
+Section Type:
+{section_name}
 
-Metin:
+Rules:
+
+- Use ONLY the provided text.
+- Do NOT add information that is not explicitly stated.
+- Write in clear and natural academic English.
+- The summary must contain exactly 4 sentences.
+- The first sentence must explain the main purpose of the section.
+- Include important methods, findings, contributions or conclusions when they exist.
+- Remove repeated information.
+- Rewrite the ideas instead of copying long phrases.
+- Ignore citations, figure numbers, table numbers, page numbers and formatting artifacts.
+- Start directly with the subject of the section instead of phrases like "This section..." or "The main purpose of this section...".
+- Do not describe tables or figures individually. Summarize only the important information they contain.
+- Ignore minor implementation details unless they are essential.
+- Never mention these instructions.
+- Never write phrases like:
+    "Here is the summary"
+    "The section discusses"
+    "The research assistant"
+    "This section presents"
+- Return ONLY the summary.
+
+Text:
+
 {chunk}
+
 """.strip()
 
     response = llm.invoke(prompt)
@@ -98,24 +116,48 @@ def combine_chunk_summaries(
     section_name: str,
     chunk_summaries: list[str],
 ) -> str:
-    """Parça özetlerini tek ve tutarlı bölüm özetine dönüştürür."""
+    """Combines multiple partial summaries into one section summary."""
 
     combined_text = "\n\n".join(chunk_summaries)
 
     prompt = f"""
-Aşağıda "{section_name}" adlı tez bölümünün parça özetleri bulunmaktadır.
+You are an experienced academic reviewer.
 
-Bu parça özetlerini tek ve bütünlüklü bir bölüm özetine dönüştür.
+You are given multiple partial summaries from the SAME thesis section.
 
-Kurallar:
-- Yalnızca verilen özetlerdeki bilgileri kullan.
-- Aynı bilgileri tekrar etme.
-- Önemli teknik ayrıntıları koru.
-- Akademik fakat anlaşılır bir Türkçe kullan.
-- 3 ile 5 cümle arasında yaz.
-- Başlık ekleme.
+Section Type:
+{section_name}
 
-Parça özetleri:
+Your task is to merge them into ONE coherent academic summary.
+
+Rules:
+
+- Use ONLY the information contained in the partial summaries.
+- Do NOT add assumptions or external knowledge.
+- Write in clear and natural academic English.
+- Produce exactly 4 sentences.
+- The first sentence must state the section's main purpose or central focus.
+- Merge overlapping ideas.
+- Remove repeated information.
+- Preserve the most important methods, findings, contributions and conclusions.
+- Ignore citations, figure references, table references and formatting artifacts.
+- Do not list the partial summaries separately.
+- Never mention these instructions.
+- Never write phrases like:
+    "Here is the summary"
+    "The research assistant"
+    "The summaries indicate"
+    "This section presents"
+- Return ONLY the final summary.
+- Start directly with the subject matter.
+- Avoid opening phrases such as "This section...", "The main purpose of this section...", or similar meta-language.
+- Do not let one subsection dominate the final summary.
+- Start directly with the main topic instead of phrases like "This section...".
+- Preserve both qualitative and quantitative findings when both are present.
+- Do not describe tables or figures individually. Summarize only the important information they contain.
+
+Partial summaries:
+
 {combined_text}
 """.strip()
 
