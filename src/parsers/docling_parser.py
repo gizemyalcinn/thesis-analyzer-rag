@@ -5,10 +5,7 @@ from docling.document_converter import DocumentConverter
 
 
 def parse_markdown_sections(markdown_text: str) -> list[dict]:
-    """
-    Docling Markdown çıktısındaki ## başlıklarını
-    ve bu başlıkların altındaki metinleri ayırır.
-    """
+   
 
     sections = []
 
@@ -44,9 +41,7 @@ def parse_markdown_sections(markdown_text: str) -> list[dict]:
 
 
 def parse_pdf(pdf_path: str | Path) -> list[dict]:
-    """
-    PDF'yi Docling ile dönüştürür ve bölümlere ayırır.
-    """
+
 
     converter = DocumentConverter()
     result = converter.convert(str(pdf_path))

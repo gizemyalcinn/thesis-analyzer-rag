@@ -8,7 +8,6 @@ from src.config.thesis_sections import SECTION_DEFINITIONS
 def get_section_definition(
     display_name: str,
 ) -> dict[str, Any] | None:
-    """Görünen bölüm adına karşılık gelen yapılandırmayı bulur."""
 
     for definition in SECTION_DEFINITIONS:
         if definition["display_name"] == display_name:
@@ -20,7 +19,6 @@ def get_section_definition(
 def get_summarizable_sections(
     sections: dict[str, str],
 ) -> dict[str, str]:
-    """Özetlenmesi gereken tez bölümlerini seçer."""
 
     summarizable_sections = {}
 
@@ -45,7 +43,6 @@ def split_text_by_words(
     text: str,
     max_words: int = 700,
 ) -> list[str]:
-    """Uzun bölüm metnini kelime sınırına göre parçalara ayırır."""
 
     words = text.split()
 
@@ -68,7 +65,6 @@ def summarize_chunk(
     section_name: str,
     chunk: str,
 ) -> str:
-    """Summarizes one part of an academic section."""
 
     prompt = f"""
 You are an experienced academic reviewer.
@@ -83,7 +79,7 @@ Rules:
 - Use ONLY the provided text.
 - Do NOT add information that is not explicitly stated.
 - Write in clear and natural academic English.
-- The summary must contain exactly 4 sentences.
+- The summary must contain exactly 4-7 sentences.
 - The first sentence must explain the main purpose of the section.
 - Include important methods, findings, contributions or conclusions when they exist.
 - Remove repeated information.
@@ -116,7 +112,6 @@ def combine_chunk_summaries(
     section_name: str,
     chunk_summaries: list[str],
 ) -> str:
-    """Combines multiple partial summaries into one section summary."""
 
     combined_text = "\n\n".join(chunk_summaries)
 
@@ -171,7 +166,6 @@ def summarize_section(
     section_name: str,
     section_text: str,
 ) -> str:
-    """Bir tez bölümünü gerektiğinde parçalara ayırarak özetler."""
 
     chunks = split_text_by_words(section_text)
 
@@ -203,7 +197,6 @@ def summarize_thesis_sections(
     llm: BaseChatModel,
     sections: dict[str, str],
 ) -> dict[str, str]:
-    """Özetlenebilir tüm tez bölümlerini ayrı ayrı özetler."""
 
     summarizable_sections = get_summarizable_sections(sections)
 

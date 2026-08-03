@@ -5,7 +5,7 @@ def load_pdf(file_path: str):
     path = Path(file_path)
 
     if not path.exists():
-        raise FileNotFoundError(f"Dosya bulunamadı: {file_path}")
+        raise FileNotFoundError(f"No PDF files found: {file_path}")
 
     loader = PyPDFLoader(str(path))
     documents= loader.load()

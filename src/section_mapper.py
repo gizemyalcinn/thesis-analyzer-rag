@@ -5,7 +5,7 @@ from src.config.thesis_sections import SECTION_DEFINITIONS
 
 
 def normalize_title(title: str) -> str:
-    """Başlıktaki bölüm numarasını ve fazla boşlukları temizler."""
+    
 
     normalized = title.strip().lower()
 
@@ -21,14 +21,6 @@ def normalize_title(title: str) -> str:
 
 
 def get_heading_level(title: str) -> int:
-    """
-    Başlığın numarasına göre seviyesini döndürür.
-
-    3 Introduction   -> 1
-    3.1 Participants -> 2
-    4.4.1 Users      -> 3
-    Abstract         -> 1
-    """
 
     match = re.match(
         r"^(\d+(?:\.\d+)*)\s+",
@@ -44,7 +36,6 @@ def get_heading_level(title: str) -> int:
 def find_exact_definition(
     normalized_title: str,
 ) -> dict[str, Any] | None:
-    """Başlığı alias listesinde tam eşleşmeyle arar."""
 
     for definition in SECTION_DEFINITIONS:
         aliases = {
@@ -59,13 +50,6 @@ def find_exact_definition(
 def find_prefix_definition(
     normalized_title: str,
 ) -> dict[str, Any] | None:
-    """
-    Uzun ve açıklayıcı akademik başlıkları güvenli ön eklerle eşler.
-
-    Örnek:
-    'results: technology use questionnaire' -> Results
-    'conclusions and future work' -> Conclusions
-    """
 
     prefix_patterns = {
         "abstract": [
@@ -114,13 +98,6 @@ def find_prefix_definition(
 def map_sections(
     parsed_sections: list[dict],
 ) -> tuple[dict[str, str], list[dict]]:
-    """
-    Docling bölümlerini standart bölüm adlarına eşler.
-
-    Dönen değerler:
-    - mapped_sections: Özetlenecek standart bölümler
-    - unmapped_sections: Eşlenemeyen başlıklar
-    """
 
     mapped_sections = {}
     unmapped_sections = []
@@ -157,7 +134,6 @@ def map_sections(
 
             continue
 
-        # Alt başlık eşleşmese bile mevcut ana bölüme eklenir.
         if heading_level > 1 and current_main_section is not None:
             if current_main_section in mapped_sections:
                 subsection_text = (

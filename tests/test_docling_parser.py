@@ -7,20 +7,19 @@ DOCS_FOLDER = Path("docs")
 
 
 def get_first_pdf() -> Path:
-    """docs klasöründeki ilk PDF dosyasını bulur."""
+    
 
     pdf_files = sorted(DOCS_FOLDER.glob("*.pdf"))
 
     if not pdf_files:
         raise FileNotFoundError(
-            "docs klasöründe test edilecek PDF bulunamadı."
+            "No PDF files found in the docs folder."
         )
 
     return pdf_files[0]
 
 
 def main() -> None:
-    """PDF'yi Docling ile dönüştürür ve Markdown çıktısını kaydeder."""
 
     pdf_path = get_first_pdf()
 
