@@ -18,15 +18,13 @@ All processing is performed locally without relying on cloud-based AI services.
 
 ## Features
 
-Features
-
-• Local RAG with Ollama
-• Multi-PDF indexing
-• Document-specific question answering
-• Automatic thesis section detection
-• Section-wise summarization using Docling
-• ChromaDB vector search
-• Source page references
+- Local RAG with Ollama
+- Multi-PDF indexing
+- Document-specific question answering
+- Automatic thesis section detection
+- Section-wise summarization using Docling
+- ChromaDB vector search
+- Source page references
 
 ---
 
