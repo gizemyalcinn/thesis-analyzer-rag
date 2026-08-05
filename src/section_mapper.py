@@ -5,17 +5,9 @@ from src.config.thesis_sections import SECTION_DEFINITIONS
 
 
 def normalize_title(title: str) -> str:
-    """
-    Normalizes a section title by removing numbering,
-    extra whitespace, and surrounding punctuation.
-    """
 
     normalized = title.strip().lower()
 
-    # Examples:
-    # 1 Introduction
-    # 2.3 Experimental Setup
-    # 4.1.2 Results
     normalized = re.sub(
         r"^\d+(?:\.\d+)*[.)]?\s+",
         "",
@@ -28,14 +20,6 @@ def normalize_title(title: str) -> str:
 
 
 def get_heading_level(title: str) -> int:
-    """
-    Determines heading level from numeric section numbering.
-
-    Examples:
-    3 Introduction       -> 1
-    3.1 Participants     -> 2
-    4.2.1 Evaluation     -> 3
-    """
 
     match = re.match(
         r"^(\d+(?:\.\d+)*)[.)]?\s+",
@@ -49,15 +33,6 @@ def get_heading_level(title: str) -> int:
 
 
 def is_structural_marker(title: str) -> bool:
-    """
-    Detects structural labels that are not actual section titles.
-
-    Examples:
-    CHAPTER I
-    CHAPTER 3
-    PART II
-    SECTION A
-    """
 
     normalized = normalize_title(title)
 
@@ -83,7 +58,6 @@ def is_structural_marker(title: str) -> bool:
 def get_definition_by_key(
     section_key: str,
 ) -> dict[str, Any] | None:
-    """Returns a section definition using its canonical key."""
 
     for definition in SECTION_DEFINITIONS:
         if definition["key"] == section_key:
@@ -95,7 +69,6 @@ def get_definition_by_key(
 def find_exact_definition(
     normalized_title: str,
 ) -> dict[str, Any] | None:
-    """Finds a section definition using exact alias matching."""
 
     for definition in SECTION_DEFINITIONS:
         normalized_aliases = {
@@ -112,15 +85,7 @@ def find_exact_definition(
 def find_prefix_definition(
     normalized_title: str,
 ) -> dict[str, Any] | None:
-    """
-    Matches longer academic headings using controlled prefixes.
-
-    This supports headings such as:
-    - Results and Discussion
-    - Recommendations for Future Studies
-    - Introduction to the Research Problem
-    """
-
+   
     prefix_patterns = {
         "abstract": [
             r"^abstract(?:\s*[:\-]\s*|\s+)",
@@ -213,7 +178,6 @@ def append_content(
     section_name: str,
     content: str,
 ) -> None:
-    """Appends content to a mapped section without overwriting it."""
 
     existing_content = mapped_sections.get(
         section_name,
@@ -228,13 +192,6 @@ def append_content(
 def map_sections(
     parsed_sections: list[dict],
 ) -> tuple[dict[str, str], list[dict]]:
-    """
-    Maps Docling headings into canonical thesis sections.
-
-    Returns:
-    - mapped_sections: canonical section name -> section content
-    - unmapped_sections: headings that could not be mapped
-    """
 
     mapped_sections: dict[str, str] = {}
     unmapped_sections: list[dict] = []
@@ -289,7 +246,6 @@ def map_sections(
 
             continue
 
-        # Unmapped subheadings are added to the current main section.
         if heading_level > 1 and current_main_section is not None:
             if current_main_section in mapped_sections:
                 subsection_content = (
