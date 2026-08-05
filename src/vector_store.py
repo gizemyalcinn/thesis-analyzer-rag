@@ -12,12 +12,6 @@ def create_vector_store(
     embeddings,
     reset: bool = True,
 ):
-    """
-    Creates a persistent Chroma vector store.
-
-    If reset is True, the existing vector database is deleted
-    before indexing the current documents.
-    """
 
     if reset and CHROMA_PATH.exists():
         shutil.rmtree(CHROMA_PATH)
@@ -37,7 +31,6 @@ def create_vector_store(
 
 
 def load_vector_store(embeddings):
-    """Loads the existing persistent Chroma vector store."""
 
     vector_store = Chroma(
         persist_directory=str(CHROMA_PATH),
