@@ -14,20 +14,20 @@ def main() -> None:
         parsed_sections
     )
 
-    print("\nEşlenen bölümler:\n")
+    print("\nMapped Sections:\n")
 
     for section_name, content in mapped_sections.items():
         print(section_name)
-        print(f"Kelime sayısı: {len(content.split())}")
-        print(f"Başlangıç: {content[:150]}...")
+        print(f"Word count: {len(content.split())}")
+        print(f"Preview: {content[:150]}...")
         print("-" * 70)
 
-    print("\nEşlenemeyen başlıklar:\n")
+    print("\nUnmapped Headings:\n")
 
     for section in unmapped_sections:
         print(
             f"- {section['title']} "
-            f"(seviye {section['heading_level']})"
+            f"( {section['heading_level']})"
         )
 
 

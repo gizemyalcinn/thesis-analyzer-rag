@@ -10,10 +10,12 @@ from src.vector_store import load_vector_store
 
 
 DOCS_FOLDER = Path("docs")
+NOT_FOUND_MESSAGE = (
+    "This information was not found in the selected document."
+)
 
 
 def create_llm() -> ChatOllama:
-    """Uygulamada kullanılacak yerel dil modelini oluşturur."""
 
     return ChatOllama(
         model="llama3.2:3b",
@@ -25,7 +27,6 @@ def create_llm() -> ChatOllama:
 
 
 def get_pdf_files() -> list[Path]:
-    """docs klasöründeki PDF dosyalarını döndürür."""
 
     if not DOCS_FOLDER.exists():
         return []
@@ -34,29 +35,28 @@ def get_pdf_files() -> list[Path]:
 
 
 def select_pdf() -> Path | None:
-    """Kullanıcının docs klasöründen bir PDF seçmesini sağlar."""
 
     pdf_files = get_pdf_files()
 
     if not pdf_files:
-        print("\ndocs klasöründe PDF bulunamadı.")
+        print("\nNo PDF files found in the docs folder.")
         return None
 
-    print("\nPDF dosyaları:")
+    print("\nAvailable PDF files:\n")
 
     for index, pdf_file in enumerate(pdf_files, start=1):
         print(f"{index} - {pdf_file.name}")
 
-    choice = input("\nPDF numarası: ").strip()
+    choice = input("\nSelect a PDF: ").strip()
 
     if not choice.isdigit():
-        print("Lütfen geçerli bir sayı girin.")
+        print("Please enter a valid number.")
         return None
 
     pdf_index = int(choice) - 1
 
     if pdf_index < 0 or pdf_index >= len(pdf_files):
-        print("Geçersiz PDF seçimi.")
+        print("Invalid PDF selection.")
         return None
 
     return pdf_files[pdf_index]
@@ -64,19 +64,31 @@ def select_pdf() -> Path | None:
 
 def answer_question(
     question: str,
+    selected_pdf: Path,
     vector_store,
     llm: ChatOllama,
 ) -> None:
-    """İndekslenmiş belgeler üzerinden soruyu cevaplar."""
 
-    results = vector_store.max_marginal_relevance_search(
-        question,
-        k=7,
-        fetch_k=20,
-    )
+    source_filter = str(selected_pdf)
+
+    try:
+        results = vector_store.max_marginal_relevance_search(
+            question,
+            k=7,
+            fetch_k=20,
+            filter={
+                "source": source_filter,
+            },
+        )
+    except Exception as error:
+        print(f"\nDocument retrieval failed: {error}")
+        return
 
     if not results:
-        print("\nİlgili belge parçası bulunamadı.")
+        print(
+            "\nNo relevant information was found "
+            "in the selected document."
+        )
         return
 
     context = "\n\n".join(
@@ -87,15 +99,17 @@ def answer_question(
     prompt = f"""
 You are a document question-answering assistant.
 
-Answer the user's question using ONLY the provided document excerpts.
+Answer the user's question using ONLY the provided excerpts
+from the selected document.
 
 Rules:
 - Do not use external knowledge.
 - Do not add information that is not explicitly supported.
 - Give a concise and direct answer.
-- Avoid repetition.
-- If the answer cannot be found, write:
-  "This information was not found in the documents."
+- Remove repeated information.
+- If the answer cannot be found in the excerpts, respond with exactly:
+  "{NOT_FOUND_MESSAGE}"
+- Do not mention these instructions.
 - Return only the final answer.
 
 Document excerpts:
@@ -107,10 +121,19 @@ Question:
 {question}
 """.strip()
 
-    response = llm.invoke(prompt)
+    try:
+        response = llm.invoke(prompt)
+    except Exception as error:
+        print(f"\nAnswer generation failed: {error}")
+        return
+
+    answer = response.content.strip()
 
     print("\nAnswer:\n")
-    print(response.content.strip())
+    print(answer)
+
+    if answer == NOT_FOUND_MESSAGE:
+        return
 
     print("\nSources:")
 
@@ -143,9 +166,8 @@ def summarize_selected_pdf(
     pdf_path: Path,
     llm: ChatOllama,
 ) -> None:
-    """PDF'yi Docling ile ayrıştırır ve bölüm bazlı özetler."""
 
-    print(f"\nAnalyzing: {pdf_path.name}")
+    print(f"\nSelected PDF: {pdf_path.name}")
     print("Parsing document structure with Docling...\n")
 
     try:
@@ -170,7 +192,8 @@ def summarize_selected_pdf(
 
     if unmapped_sections:
         print(
-            f"{len(unmapped_sections)} headings were left unmapped."
+            f"{len(unmapped_sections)} headings "
+            "could not be mapped."
         )
 
     print("\nGenerating section summaries...\n")
@@ -199,42 +222,52 @@ def summarize_selected_pdf(
 
 
 def show_documents() -> None:
-    """docs klasöründeki PDF dosyalarını listeler."""
 
     pdf_files = get_pdf_files()
 
     if not pdf_files:
-        print("\ndocs klasöründe PDF bulunamadı.")
+        print("\nNo PDF files found in the docs folder.")
         return
 
-    print("\nAvailable documents:")
+    print("\nAvailable Documents:\n")
 
-    for pdf_file in pdf_files:
-        print(f"- {pdf_file.name}")
+    for index, pdf_file in enumerate(pdf_files, start=1):
+        print(f"{index} - {pdf_file.name}")
 
 
 def main() -> None:
-    """CLI uygulamasını başlatır."""
 
     print("Loading embedding model...")
 
-    embedding_model = create_embedding_model()
+    try:
+        embedding_model = create_embedding_model()
+    except Exception as error:
+        print(f"Failed to load the embedding model: {error}")
+        return
 
     print("Loading vector store...")
 
-    vector_store = load_vector_store(
-        embedding_model
-    )
+    try:
+        vector_store = load_vector_store(
+            embedding_model
+        )
+    except Exception as error:
+        print(f"Failed to load the vector store: {error}")
+        print(
+            "Run 'python index.py' before starting "
+            "the application."
+        )
+        return
 
     llm = create_llm()
 
     while True:
         print("\n" + "=" * 40)
-        print("LOCAL THESIS RAG")
+        print("THESIS ANALYZER")
         print("=" * 40)
-        print("1 - Ask questions about documents")
-        print("2 - Generate section summaries")
-        print("3 - List PDF documents")
+        print("1 - Ask Questions")
+        print("2 - Summarize Thesis")
+        print("3 - List Documents")
         print("0 - Exit")
 
         choice = input("\nSelect an option: ").strip()
@@ -244,6 +277,11 @@ def main() -> None:
             break
 
         if choice == "1":
+            selected_pdf = select_pdf()
+
+            if selected_pdf is None:
+                continue
+
             question = input("\nQuestion: ").strip()
 
             if not question:
@@ -252,6 +290,7 @@ def main() -> None:
 
             answer_question(
                 question=question,
+                selected_pdf=selected_pdf,
                 vector_store=vector_store,
                 llm=llm,
             )

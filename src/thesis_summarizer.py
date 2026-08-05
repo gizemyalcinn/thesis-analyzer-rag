@@ -203,7 +203,7 @@ def summarize_thesis_sections(
     section_summaries = {}
 
     for section_name, section_text in summarizable_sections.items():
-        print(f"{section_name} bölümü özetleniyor...")
+        print(f"Summarizing {section_name}...")
 
         summary = summarize_section(
             llm=llm,

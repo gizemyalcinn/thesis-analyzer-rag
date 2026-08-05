@@ -11,3 +11,4 @@ def load_pdf(file_path: str):
     documents= loader.load()
 
     return documents
+

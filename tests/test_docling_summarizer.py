@@ -21,7 +21,7 @@ def create_llm() -> ChatOllama:
 
 
 def main() -> None:
-    print("\nPDF Docling ile ayrıştırılıyor...")
+    print("\nParsing PDF with Docling...")
 
     parsed_sections = parse_pdf(PDF_PATH)
 
@@ -30,13 +30,13 @@ def main() -> None:
     )
 
     print(
-        f"{len(mapped_sections)} ana bölüm eşlendi."
-    )
+        f"{len(mapped_sections)} main sections mapped.")
+    
 
     if unmapped_sections:
         print(
-            f"{len(unmapped_sections)} başlık eşlenemedi."
-        )
+        f"{len(unmapped_sections)} headings could not be mapped.")
+        
 
     llm = create_llm()
 
@@ -46,7 +46,7 @@ def main() -> None:
     )
 
     print("\n" + "=" * 70)
-    print("BÖLÜM ÖZETLERİ")
+    print("SECTION SUMMARIES")
     print("=" * 70)
 
     for section_name, summary in summaries.items():

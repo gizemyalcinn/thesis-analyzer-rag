@@ -23,8 +23,8 @@ def main() -> None:
 
     pdf_path = get_first_pdf()
 
-    print(f"\nDönüştürülen PDF: {pdf_path.name}")
-    print("Docling belgeyi analiz ediyor...\n")
+    print(f"\nProcessing PDF: {pdf_path.name}")
+    print("Parsing document structure using Docling...\n")
 
     converter = DocumentConverter()
     result = converter.convert(pdf_path)
@@ -38,10 +38,8 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Dönüştürme tamamlandı.")
-    print(f"Çıktı kaydedildi: {output_path}")
-    print("\nİlk 2000 karakter:\n")
-    print(markdown_text[:2000])
+    print("Document parsing completed successfully.")
+    print(f"Markdown file saved to: {output_path}")
 
 
 if __name__ == "__main__":

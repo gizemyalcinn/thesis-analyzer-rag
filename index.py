@@ -10,12 +10,12 @@ docs_path = Path("docs")
 pdf_files = list(docs_path.glob("*.pdf"))
 
 if not pdf_files:
-    raise FileNotFoundError("docs klasöründe PDF bulunamadı.")
+    raise FileNotFoundError("No PDF files found in the docs folder.")
 
 all_documents = []
 
 for pdf_file in pdf_files:
-    print(f"Okunuyor: {pdf_file.name}")
+    print(f"Reading: {pdf_file.name}")
 
     documents = load_pdf(str(pdf_file))
     all_documents.extend(documents)
@@ -28,5 +28,5 @@ create_vector_store(
     embedding_model
 )
 
-print(f"\n{len(pdf_files)} PDF indekslendi.")
-print(f"{len(chunks)} chunk oluşturuldu.")
+print(f"\nIndexed {len(pdf_files)} PDF files.")
+print(f"Created {len(chunks)} text chunks.")
